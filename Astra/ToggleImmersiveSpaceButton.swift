@@ -26,6 +26,7 @@ struct ToggleImmersiveSpaceButton: View {
                         // Only set .closed in ImmersiveView.onDisappear().
 
                     case .closed:
+                        appModel.immersiveSpaceError = nil
                         appModel.immersiveSpaceState = .inTransition
                         switch await openImmersiveSpace(id: appModel.immersiveSpaceID) {
                             case .opened:
@@ -34,7 +35,11 @@ struct ToggleImmersiveSpaceButton: View {
                                 // Only set .open in ImmersiveView.onAppear().
                                 break
 
-                            case .userCancelled, .error:
+                            case .error:
+                                appModel.immersiveSpaceError = "无法打开空间，请稍后重试。"
+                                appModel.immersiveSpaceState = .closed
+
+                            case .userCancelled:
                                 // On error, we need to mark the immersive space
                                 // as closed because it failed to open.
                                 fallthrough
@@ -49,7 +54,7 @@ struct ToggleImmersiveSpaceButton: View {
                 }
             }
         } label: {
-            Text(appModel.immersiveSpaceState == .open ? "Hide Immersive Space" : "Show Immersive Space")
+            Text(appModel.immersiveSpaceState == .open ? "收起模型" : "放置模型")
         }
         .disabled(appModel.immersiveSpaceState == .inTransition)
         .animation(.none, value: 0)
