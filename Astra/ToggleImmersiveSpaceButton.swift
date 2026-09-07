@@ -28,8 +28,10 @@ struct ToggleImmersiveSpaceButton: View {
                     case .closed:
                         appModel.immersiveSpaceError = nil
                         appModel.immersiveSpaceState = .inTransition
+                        appModel.immersiveSpaceDidOpen = false
                         switch await openImmersiveSpace(id: appModel.immersiveSpaceID) {
                             case .opened:
+                                appModel.immersiveSpaceDidOpen = true
                                 // Don't set immersiveSpaceState to .open because there
                                 // may be multiple paths to ImmersiveView.onAppear().
                                 // Only set .open in ImmersiveView.onAppear().

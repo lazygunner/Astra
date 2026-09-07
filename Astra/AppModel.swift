@@ -18,6 +18,8 @@ class AppModel {
         case inTransition
         case open
     }
+    var immersiveSpaceDidOpen = false
     var immersiveSpaceError: String?
     var immersiveSpaceState = ImmersiveSpaceState.closed
+    var spatialTrackingWarning: String?
 }

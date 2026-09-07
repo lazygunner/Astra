@@ -10,8 +10,10 @@ final class ModelAssembly {
     private(set) var partsAreUnlocked = false
     private(set) var isAnimating = false
     private(set) var partCount = 0
+    @ObservationIgnored var inputModeChanged: ((Bool) -> Void)?
     var canExpand: Bool { partCount > 1 }
 
+    @ObservationIgnored private var housingInput: Entity?
     @ObservationIgnored private var parts: [Part] = []
     @ObservationIgnored private weak var root: Entity?
     @ObservationIgnored private var animationTask: Task<Void, Never>?
@@ -111,10 +113,38 @@ final class ModelAssembly {
     }
 
     private func enableInput(_ entity: Entity) {
-        let bounds = entity.visualBounds(recursive: true, relativeTo: entity)
+        var bounds = entity.visualBounds(recursive: true, relativeTo: entity)
+        if entity === root, let keyboard = entity.findEntity(named: "Cube_032") {
+            // The old whole-model box covered the keyboard with an invisible front
+            // wall, intercepting gaze rays before they reached either key region.
+            // Keep the housing as the grab target, above the keyboard plane.
+            let keyboardBounds = keyboard.visualBounds(relativeTo: entity)
+            var lowerY = keyboardBounds.max.y + 0.01
+            var upper = bounds.max
+            if let screen = entity.findEntity(named: "Display___convex_glass___image_bearing_surface") {
+                let screenBounds = screen.visualBounds(relativeTo: entity)
+                lowerY = max(lowerY, screenBounds.min.y)
+                upper.z = min(upper.z, screenBounds.max.z)
+            }
+            if lowerY < upper.y {
+                bounds = BoundingBox(min: [bounds.min.x, lowerY, bounds.min.z], max: upper)
+            }
+        }
         let shape = ShapeResource.generateBox(size: simd_max(bounds.extents, SIMD3(repeating: 0.0001)))
             .offsetBy(translation: bounds.center)
-        ManipulationComponent.configureEntity(entity, collisionShapes: [shape])
+        if entity === root {
+            // Only the housing proxy receives grab input. Putting InputTarget
+            // on the root also includes descendant key colliders in its input tree.
+            let proxy = Entity()
+            proxy.name = "AstraHousingGrabTarget"
+            proxy.components.set(InputTargetComponent(allowedInputTypes: .all))
+            proxy.components.set(CollisionComponent(shapes: [shape]))
+            proxy.components.set(ManipulationComponent.HitTarget(redirectedEntity: entity))
+            entity.addChild(proxy)
+            housingInput = proxy
+        } else {
+            ManipulationComponent.configureEntity(entity, collisionShapes: [shape])
+        }
         var manipulation = ManipulationComponent()
         manipulation.releaseBehavior = .stay
         entity.components.set(manipulation)
@@ -122,6 +152,9 @@ final class ModelAssembly {
 
     private func configureInput() {
         guard let root else { return }
+        housingInput?.removeFromParent()
+        housingInput = nil
+        inputModeChanged?(!isAnimating && !partsAreUnlocked && !isExpanded)
         removeInput(root)
         parts.forEach { removeInput($0.entity) }
         guard !isAnimating else { return }
@@ -158,6 +191,8 @@ final class ModelAssembly {
     }
 
     func clear() {
+        housingInput?.removeFromParent()
+        housingInput = nil
         animationTask?.cancel()
         animationTask = nil
         parts.forEach { $0.entity.stopAllAnimations(recursive: false) }

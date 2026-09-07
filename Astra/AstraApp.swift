@@ -1,15 +1,20 @@
 import SwiftUI
+import RealityKit
 
 @main
 struct AstraApp: App {
     @State private var appModel = AppModel()
 
-    var body: some Scene {
+    init() {
+        KeyboardActionComponent.registerComponent()
+    }
+
+    var body: some SwiftUI.Scene {
         WindowGroup {
             ContentView()
                 .environment(appModel)
         }
-        .defaultSize(width: 480, height: 540)
+        .defaultSize(width: 600, height: 720)
 
         ImmersiveSpace(id: appModel.immersiveSpaceID) {
             ImmersiveView()

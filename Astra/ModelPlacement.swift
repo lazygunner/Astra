@@ -7,6 +7,8 @@ import simd
 @Observable
 final class ModelPlacement {
     let assembly = ModelAssembly()
+    let screenVideo = ScreenVideoPlayer()
+    @ObservationIgnored let keyboardControls = ModelKeyboardControls()
     @ObservationIgnored private var activeManipulations: Set<Entity.ID> = []
     var isLoading = false
     var errorMessage: String?
@@ -40,6 +42,11 @@ final class ModelPlacement {
             normalized.scale = SIMD3(repeating: 0.6 / longest)
             root.children.removeAll()
             root.addChild(normalized)
+            screenVideo.attach(to: asset)
+            keyboardControls.attach(to: asset, video: screenVideo)
+            assembly.inputModeChanged = { [weak self] enabled in
+                self?.keyboardControls.setEnabled(enabled)
+            }
             assembly.prepare(root: root, asset: asset)
             reset()
             isReady = true
@@ -86,6 +93,8 @@ final class ModelPlacement {
     }
 
     func unload() {
+        keyboardControls.detach()
+        screenVideo.detach()
         assembly.clear()
         activeManipulations.removeAll()
         generation = UUID()

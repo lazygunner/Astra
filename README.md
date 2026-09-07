@@ -10,6 +10,7 @@ A visionOS app for exploring and interacting with a 3D model on Apple Vision Pro
 - Expand the model into an animated exploded view.
 - Unlock individual parts to move, rotate, and scale them independently.
 - Reassemble the model or reset its position and scale.
+- Play a local video on the curved model screen, with play/pause, mute, and original-screen restoration.
 
 The exploded view uses the model's 16 existing mesh groups.
 
@@ -27,3 +28,46 @@ The app's controls are currently in Chinese. Simulator compilation has been veri
 ## Acknowledgments
 
 Interaction and exploded-view behavior are inspired by Apple's **Manipulating Models with RealityKit** sample. Its license is included in [ThirdPartyNotices](ThirdPartyNotices/ManipulatingModelsWithRealityKit-LICENSE.txt).
+
+## Screen Video
+
+After placing the model, select **从相册选择视频** (Choose from Photos) to import a video from your photo library, or **选择本地视频** (Choose Local Video) to pick a compatible MP4 or MOV from Files. Photos videos are copied to a temporary file for playback and removed when replaced, stopped, or the model is closed. The video follows the screen during movement and exploded-view interaction. Select **恢复原屏幕** to stop playback and restore the original display.
+
+The app remaps a copy of the screen mesh's texture coordinates for video playback without changing the bundled USDZ. Video fills the screen without stretching; when its aspect ratio differs from the screen, it is cropped symmetrically around the centre. No sample video is bundled. Playback and visual orientation still require validation on Apple Vision Pro.
+
+## Video Projector
+
+On visionOS 27 or later, the selected video is also sent to a separate projector behind the model. Use the **墙面视频投影** switch to turn the effect on or off. It uses RealityKit's `SpotLightComponent.ProjectiveTexture` and `SurroundingsLight` to project the moving image onto physical or immersive surfaces. This is an additional consumer of the existing player item; the model screen's playback controls and centre-crop mapping remain unchanged. The effect requires a device with Apple6 GPU feature support and should be validated on Apple Vision Pro.
+
+
+The video projection now uses `LowLevelTexture.replace(using:)` so RealityKit synchronizes GPU writes with texture consumption. It fits decoded frames into a black square mask (up to 1024 px), preserves the last frame when re-enabled while paused, and reports missing frames and GPU failures in the controls. Turning projection off disables the light itself.
+
+Use **测试墙面投影** without a video to project a static checkerboard with a red cross. Point the back of the model at a nearby wall, allow World Sensing, and look around to let the system discover surfaces. **结束投影测试** resumes the selected video projection. A successful texture submission does not prove a physical wall is receiving the light; that still requires visual verification on the headset.
+
+Implementation references: [Apple WWDC26 physical-space lighting and projective textures](https://developer.apple.com/videos/play/wwdc2026/279/), [LowLevelTexture GPU synchronization](https://developer.apple.com/documentation/realitykit/lowleveltexture/replace(using:)), [DarkString visionOS 27 projective texture tutorial](https://www.darkstring.com/en/articles/visionos27-tutorial-projective-texture).
+
+Video projection flips the Core Image output vertically to match the projector texture coordinates. The video rectangle uses the player's presentation aspect ratio and fits its diagonal inside the spotlight's uniform inner cone, with opaque black outside the rectangle. This preserves all four corners instead of producing a circular fade. Oblique walls still introduce natural perspective distortion.
+
+## Model keyboard controls
+
+With a video selected, tap the existing keyboard's left main-key area to play/pause, or its right number-pad area to toggle projection. Each action has a distinct short synthesized key sound, including an unavailable-action tone. No visible buttons or geometry are added. These regions follow the keyboard and are disabled during exploded/unlocked-part interaction. Grab the upper housing to move the assembled model; its hit box leaves the keyboard accessible. The window controls stay synchronized.
+
+## Five video presets
+
+The window has three sections: playback/projection, numbered video presets, and model adjustments. Configure slots **1–5** from Files or Photos before or after placing the model. Preset files are copied to Application Support with an atomically saved manifest, so they survive relaunch. Replaced files stay available to any active player until the next launch.
+
+The five existing engraved keys below the display select the matching videos. Their hit regions use measured USDZ coordinates; no visible geometry is added. The existing keyboard playback/projection regions and sound feedback remain available. The footer reports received model actions, including unconfigured slots. All model shortcuts remain disabled during exploded/unlocked interaction.
+
+Custom input components register at app startup, before SwiftUI constructs component-filtered gesture queries. Native key entities receive system taps through RealityView, matching the viewshine project. Device compilation and standalone preset persistence checks pass; headset gaze targeting and the window layout still require on-device visual verification.
+
+Persistence checks: compile `Astra/VideoPresets.swift` with `Tests/VideoPresetsChecks.swift` using `swiftc -parse-as-library` and run the output executable.
+
+## Direct-touch model buttons
+
+The model now follows `viewshine-weixinzhineng/PocketShowRoomV2/Views/MainImmersiveView.swift` and its authored `UI.usda` buttons: native key entities with `InputTargetComponent(allowedInputTypes: .all)` and solid `CollisionComponent` shapes, routed through `TapGesture().targetedToAnyEntity()`. Transparent SwiftUI attachments and their asynchronous sizing have been removed. No custom hand-tracking session is started.
+
+The housing has a separate input proxy that redirects manipulation to the model root using `ManipulationComponent.HitTarget`. The root no longer has an input target that encompasses descendant key colliders. Keys remain disabled during explosion and unlocked-part movement.
+
+Enable **显示按键触碰区域** under **数字键视频** to display cyan boxes using the exact same dimensions as the colliders. Bring the model within reach and touch each box. Logs report every `System tap target`, while the window reports the key action or, in diagnostic mode, a non-key target. Check keys 1–5, playback/pause and projection, then repeat after moving/scaling and closing/reopening. Confirm housing manipulation still works. Device compilation passes; physical touch recognition must still be verified on Vision Pro.
+
+References: [Apple — InputTargetComponent](https://developer.apple.com/documentation/realitykit/inputtargetcomponent), [ManipulationComponent.HitTarget](https://developer.apple.com/documentation/realitykit/manipulationcomponent/hittarget).
