@@ -21,6 +21,8 @@ struct ImmersiveView: View {
             let container = Entity()
             placement.root.removeFromParent()
             container.addChild(placement.root)
+            placement.sceneRoot.removeFromParent()
+            container.addChild(placement.sceneRoot)
             content.add(container)
             subscriptions = [
                 content.subscribe(to: ManipulationEvents.WillBegin.self) { event in

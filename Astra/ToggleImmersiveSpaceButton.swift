@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct ToggleImmersiveSpaceButton: View {
+    var controlsFullImmersion = false
 
     @Environment(AppModel.self) private var appModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
@@ -19,6 +21,10 @@ struct ToggleImmersiveSpaceButton: View {
             Task { @MainActor in
                 switch appModel.immersiveSpaceState {
                     case .open:
+                        if controlsFullImmersion {
+                            appModel.toggleFullImmersion(reduceMotion: reduceMotion)
+                            return
+                        }
                         appModel.immersiveSpaceState = .inTransition
                         await dismissImmersiveSpace()
                         // Don't set immersiveSpaceState to .closed because there
@@ -27,6 +33,7 @@ struct ToggleImmersiveSpaceButton: View {
 
                     case .closed:
                         appModel.immersiveSpaceError = nil
+                        appModel.pendingFullImmersion = controlsFullImmersion ? reduceMotion : nil
                         appModel.immersiveSpaceState = .inTransition
                         appModel.immersiveSpaceDidOpen = false
                         switch await openImmersiveSpace(id: appModel.immersiveSpaceID) {
@@ -38,6 +45,7 @@ struct ToggleImmersiveSpaceButton: View {
                                 break
 
                             case .error:
+                                appModel.resetImmersion()
                                 appModel.immersiveSpaceError = "无法打开空间，请稍后重试。"
                                 appModel.immersiveSpaceState = .closed
 
@@ -46,6 +54,7 @@ struct ToggleImmersiveSpaceButton: View {
                                 // as closed because it failed to open.
                                 fallthrough
                             @unknown default:
+                                appModel.resetImmersion()
                                 // On unknown response, assume space did not open.
                                 appModel.immersiveSpaceState = .closed
                         }
@@ -56,9 +65,12 @@ struct ToggleImmersiveSpaceButton: View {
                 }
             }
         } label: {
-            Text(appModel.immersiveSpaceState == .open ? "收起模型" : "放置模型")
+            Text(controlsFullImmersion
+                 ? (appModel.isChangingImmersion ? "正在切换…" : (appModel.isFullyImmersed ? "恢复真实环境" : "进入全沉浸"))
+                 : (appModel.immersiveSpaceState == .open ? "收起模型" : "放置模型"))
+                .frame(minWidth: controlsFullImmersion ? 120 : nil)
         }
-        .disabled(appModel.immersiveSpaceState == .inTransition)
+        .disabled(appModel.immersiveSpaceState == .inTransition || appModel.isChangingImmersion)
         .animation(.none, value: 0)
         .fontWeight(.semibold)
     }

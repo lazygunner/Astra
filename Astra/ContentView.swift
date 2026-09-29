@@ -13,7 +13,10 @@ struct ContentView: View {
                     Text("空间视频控制台").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
-                ToggleImmersiveSpaceButton()
+                VStack(alignment: .trailing, spacing: 8) {
+                    ToggleImmersiveSpaceButton()
+                    ToggleImmersiveSpaceButton(controlsFullImmersion: true)
+                }
             }
             .padding(24)
             Picker("控制台", selection: $tab) {

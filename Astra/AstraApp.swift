@@ -7,6 +7,8 @@ struct AstraApp: App {
 
     init() {
         KeyboardActionComponent.registerComponent()
+        TelephoneCordComponent.registerComponent()
+        TelephoneCordSystem.registerSystem()
     }
 
     var body: some SwiftUI.Scene {
@@ -20,8 +22,14 @@ struct AstraApp: App {
             ImmersiveView()
                 .environment(appModel)
                 .onAppear { appModel.immersiveSpaceState = .open }
-                .onDisappear { appModel.immersiveSpaceState = .closed }
+                .preferredSurroundingsEffect(.colorMultiply(Color(
+                    white: appModel.surroundingsBrightness
+                )))
+                .onDisappear {
+                    appModel.immersiveSpaceState = .closed
+                    appModel.resetImmersion()
+                }
         }
-        .immersionStyle(selection: .constant(.mixed), in: .mixed)
+        .immersionStyle(selection: $appModel.immersionStyle, in: .mixed, .full)
     }
 }
