@@ -118,4 +118,9 @@ The repository provides standalone test and asset preparation tools:
   - [ManipulationComponent.HitTarget](https://developer.apple.com/documentation/realitykit/manipulationcomponent/hittarget)
   - [LowLevelTexture.replace(using:)](https://developer.apple.com/documentation/realitykit/lowleveltexture/replace(using:))
 - **DarkString**: [visionOS 27 Projective Texture Tutorial](https://www.darkstring.com/en/articles/visionos27-tutorial-projective-texture).
-- **PocketShowRoomV2**: Direct touch button architecture pattern inspired by `viewshine-weixinzhineng/PocketShowRoomV2`.
+
+---
+
+## 📄 License (开源许可)
+
+This project is open-source and available under the [MIT License](LICENSE).
